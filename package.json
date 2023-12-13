@@ -1,5 +1,5 @@
 {
-  "name": "makima",
+  "name": "@makimai/core",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
