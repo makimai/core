@@ -1,4 +1,3 @@
-import { search } from "./search";
 import OpenAI from "openai";
 import { MakimaConfig } from "..";
 import { ChatCompletionMessageToolCall } from "openai/resources/index.mjs";
