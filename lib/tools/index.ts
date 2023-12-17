@@ -1,10 +1,15 @@
 import OpenAI from "openai";
-import { MakimaConfig } from "..";
 import { ChatCompletionMessageToolCall } from "openai/resources/index.mjs";
+import { MakimaConfig } from "../inference-handler";
+
+export type ToolProps = {
+  config: MakimaConfig;
+  integrations?: Record<string, string>;
+};
 
 export type ToolsMapType = Record<
   string,
-  (args: any, props: { config: MakimaConfig }) => Promise<any>
+  (args: any, props: ToolProps) => Promise<any>
 >;
 
 export async function runTool({
@@ -14,7 +19,7 @@ export async function runTool({
 }: {
   tool: ChatCompletionMessageToolCall;
   tools_map: ToolsMapType;
-  config: MakimaConfig;
+  config: ToolProps;
 }): Promise<OpenAI.Chat.Completions.ChatCompletionToolMessageParam> {
   let validated_args;
   try {
@@ -31,9 +36,7 @@ export async function runTool({
   }
 
   try {
-    let tool_res = await tools_map[tool.function.name](validated_args, {
-      config,
-    });
+    let tool_res = await tools_map[tool.function.name](validated_args, config);
     tool_res = JSON.stringify(tool_res);
 
     const res: OpenAI.Chat.Completions.ChatCompletionToolMessageParam = {

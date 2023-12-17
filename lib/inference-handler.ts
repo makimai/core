@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ToolsMapType, runTool } from "./tools";
+import { ToolProps, ToolsMapType, runTool } from "./tools";
 
 import { ZodError, z } from "zod";
 
@@ -33,7 +33,7 @@ export interface MessagesController {
   add(
     message:
       | OpenAI.ChatCompletionMessageParam
-      | OpenAI.ChatCompletionMessageParam[],
+      | OpenAI.ChatCompletionMessageParam[]
   ): Promise<OpenAI.ChatCompletionMessageParam[]>;
   getAll(): Promise<OpenAI.ChatCompletionMessageParam[]>;
   clear(): Promise<void>;
@@ -66,13 +66,13 @@ export function createMakimaInstance({
   messages_controller = getDefaultMessagesController(),
 }: {
   tools?: UserToolType[];
-  config: MakimaConfig;
+  config: ToolProps;
   system_prompts: OpenAI.ChatCompletionMessageParam[];
-  messages_controller: MessagesController;
+  messages_controller?: MessagesController;
 }) {
   // Validate the configuration against the schema
   try {
-    makimaConfigSchema.parse(config);
+    makimaConfigSchema.parse(config.config);
     console.log("Configuration is valid!");
   } catch (error) {
     if (error instanceof ZodError) {
@@ -84,28 +84,28 @@ export function createMakimaInstance({
     }
   }
 
-  if (!(config.openai || config.azure)) {
+  if (!(config.config.openai || config.config.azure)) {
     console.error("Please provide either openai or azure config");
     process.exit(1); // Exit the program with a non-zero status code
   }
 
   const azureOptions = {
-    apiKey: config.azure?.azureOpenAIApiKey,
-    baseURL: `https://${config.azure?.azureOpenAIApiInstanceName}.openai.azure.com/openai/deployments/${config.azure?.azureOpenAIApiDeploymentName}`,
-    defaultQuery: { "api-version": config.azure?.azureOpenAIApiVersion },
-    defaultHeaders: { "api-key": config.azure?.azureOpenAIApiKey },
+    apiKey: config.config.azure?.azureOpenAIApiKey,
+    baseURL: `https://${config.config.azure?.azureOpenAIApiInstanceName}.openai.azure.com/openai/deployments/${config.config.azure?.azureOpenAIApiDeploymentName}`,
+    defaultQuery: { "api-version": config.config.azure?.azureOpenAIApiVersion },
+    defaultHeaders: { "api-key": config.config.azure?.azureOpenAIApiKey },
   };
 
   const openaiOptions = {
-    apiKey: config.openai?.openAIApiKey,
+    apiKey: config.config.openai?.openAIApiKey,
   };
 
   const model =
-    config.model ??
-    config.azure?.azureOpenAIApiDeploymentName ??
+    config.config.model ??
+    config.config.azure?.azureOpenAIApiDeploymentName ??
     "gpt-3.5-turbo-1106";
 
-  const openai = new OpenAI(config.azure ? azureOptions : openaiOptions);
+  const openai = new OpenAI(config.config.azure ? azureOptions : openaiOptions);
 
   const systemPrompts: OpenAI.ChatCompletionMessageParam[] =
     userSystemPrompts ?? [
@@ -118,25 +118,27 @@ export function createMakimaInstance({
 
   async function ask(
     question: string,
-    tools: OpenAI.ChatCompletionTool[] = [],
-    tools_map: ToolsMapType,
+    tools?: OpenAI.ChatCompletionTool[],
+    tools_map?: ToolsMapType
   ) {
     let messages = await messages_controller.add(
-      systemPrompts.concat({ role: "user", content: question }),
+      systemPrompts.concat({ role: "user", content: question })
     );
 
     const res = await openai.chat.completions.create({
       model,
-      tools: tools.map((tool) => {
-        return {
-          type: tool.type,
-          function: {
-            name: tool.function.name,
-            description: tool.function.description,
-            parameters: tool.function.parameters,
-          },
-        } as OpenAI.ChatCompletionTool;
-      }),
+      tools: tools
+        ? tools.map((tool) => {
+            return {
+              type: tool.type,
+              function: {
+                name: tool.function.name,
+                description: tool.function.description,
+                parameters: tool.function.parameters,
+              },
+            } as OpenAI.ChatCompletionTool;
+          })
+        : undefined,
       messages,
       stream: false,
     });
@@ -171,8 +173,8 @@ export function createMakimaInstance({
   }: {
     tool_calls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[];
     message_history: OpenAI.ChatCompletionMessageParam[];
-    tools: OpenAI.ChatCompletionTool[];
-    tools_map: ToolsMapType;
+    tools?: OpenAI.ChatCompletionTool[];
+    tools_map?: ToolsMapType;
   }) {
     const tools_results = await Promise.allSettled(
       tool_calls?.map(async (tool) => {
@@ -180,10 +182,12 @@ export function createMakimaInstance({
           "Calling: ",
           tool.function.name,
           "\nWith args: ",
-          tool.function.arguments,
+          tool.function.arguments
         );
-        return await runTool({ config, tool, tools_map });
-      }),
+        return tools_map
+          ? await runTool({ config, tool, tools_map })
+          : undefined;
+      })
     );
 
     const new_messages = tools_results
@@ -193,7 +197,7 @@ export function createMakimaInstance({
         }
       })
       .filter(
-        (message) => message !== undefined,
+        (message) => message !== undefined
       ) as OpenAI.ChatCompletionMessageParam[];
 
     const new_message_history = message_history
@@ -202,7 +206,7 @@ export function createMakimaInstance({
 
     const res = await openai.chat.completions.create({
       model,
-      tools: tools.map((tool) => {
+      tools: tools?.map((tool) => {
         return {
           type: tool.type,
           function: {
