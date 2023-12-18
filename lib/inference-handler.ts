@@ -73,7 +73,7 @@ export function createMakimaInstance({
   // Validate the configuration against the schema
   try {
     makimaConfigSchema.parse(config.config);
-    console.log("Configuration is valid!");
+    // console.log("Configuration is valid!");
   } catch (error) {
     if (error instanceof ZodError) {
       console.error("Configuration validation failed:", error.errors);
