@@ -9,6 +9,8 @@ bun install @makimai/core
 ### Get started
 
 ```typescript
+import { createMakimaInstance } from "@makimai/core";
+
 const test = createMakimaInstance({
   config: {
     config: {
