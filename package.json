@@ -9,7 +9,7 @@
     "typescript": "^5.0.0"
   },
   "description": "To install dependencies:",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "index.js",
   "dependencies": {
     "openai": "^4.21.0",
