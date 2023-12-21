@@ -9,6 +9,7 @@ export const makimaConfigSchema = z.object({
   openai: z
     .object({
       openAIApiKey: z.string(),
+      openAIBaseURL: z.string().optional(),
     })
     .optional(),
   azure: z
@@ -98,6 +99,7 @@ export function createMakimaInstance({
 
   const openaiOptions = {
     apiKey: config.config.openai?.openAIApiKey,
+    baseURL: config.config.openai?.openAIBaseURL,
   };
 
   const model =
