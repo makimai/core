@@ -204,7 +204,12 @@ export function createMakimaInstance({
 
     const new_message_history = message_history
       .concat(new_messages)
-      .map((m) => (m.content ? m : { ...m, content: null }));
+      .map(
+        (m) =>
+          (m.content
+            ? m
+            : { ...m, content: null }) as OpenAI.ChatCompletionMessageParam
+      );
 
     const res = await openai.chat.completions.create({
       model,
